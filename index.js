@@ -76,19 +76,25 @@ async function run() {
             res.send(result)
         })
 
-        app.patch('/reviews/:id', async (req, res) => {
+        app.get('/update/:id', async (req, res) => {
             const id = req.params.id;
-            const status = req.body.status
-            const query = { _id: ObjectId(id) }
-            const updatedDoc = {
+            const query = { _id: ObjectId(id) };
+            const user = await reviewCollection.findOne(query);
+            res.send(user);
+        })
+
+        app.put('/update/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const review = req.body
+            const option = { upsert: true }
+            const updatedReview = {
                 $set: {
-                    status: status
+                    review: review.review
                 }
-
             }
-            const result = await reviewCollection.updateOne(query, updatedDoc)
+            const result = await reviewCollection.updateOne(filter, updatedReview, option)
             res.send(result)
-
         })
 
         app.delete('/reviews/:id', async (req, res) => {
