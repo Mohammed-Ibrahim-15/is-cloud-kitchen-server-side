@@ -69,6 +69,18 @@ async function run() {
             res.send(reviews)
         })
 
+        app.get('/allReview', async (req, res) => {
+            let query = {};
+            if (req.query.service) {
+                query = {
+                    service: req.query.service
+                }
+            }
+            const cursor = reviewCollection.find(query);
+            const allReview = await cursor.toArray();
+            res.send(allReview)
+        })
+
 
         app.post('/reviews', async (req, res) => {
             const review = req.body;
