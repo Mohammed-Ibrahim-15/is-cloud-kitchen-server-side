@@ -24,7 +24,8 @@ async function run() {
         app.get('/items', async (req, res) => {
             const query = {}
             const cursor = serviceCollection.find(query)
-            const items = await cursor.limit(3).toArray();
+            const items = await (await cursor.limit(3).toArray()).reverse();
+            // const items = await cursor.limit(3).toArray();
             res.send(items)
 
         })
@@ -32,7 +33,8 @@ async function run() {
         app.get('/services', async (req, res) => {
             const query = {}
             const cursor = serviceCollection.find(query)
-            const items = await cursor.toArray();
+            const items = await (await cursor.toArray()).reverse();
+            // const items = await cursor.toArray();
             res.send(items)
 
         });
