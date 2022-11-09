@@ -1,5 +1,6 @@
 const express = require('express')
 const cors = require('cors')
+const jwt = require('jsonwebtoken')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
 require('dotenv').config()
@@ -16,17 +17,42 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@clu
 // console.log(uri)
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+function verifyJWT(req, res, next) {
+    const authHeader = req.headers.authorization
+    if (!authHeader) {
+        return res.status(401).send({ message: 'Unauthorized access' })
+    }
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+        if (err) {
+            return res.status(401).send({ message: 'Forbidden access' })
+        }
+        req.decoded = decoded;
+        next();
+    })
+}
+
+
+
 
 async function run() {
     try {
         const serviceCollection = client.db('isCloudKitchen').collection('items');
         const reviewCollection = client.db('isCloudKitchen').collection('reviews');
 
+        app.post('/jwt', (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '30 days' })
+            res.send({ token })
+
+        })
+
+
         app.get('/items', async (req, res) => {
             const query = {}
             const cursor = serviceCollection.find(query)
-            const items = await (await cursor.limit(3).toArray()).reverse();
-            // const items = await cursor.limit(3).toArray();
+            const items = await cursor.limit(3).toArray();
             res.send(items)
 
         })
@@ -34,8 +60,7 @@ async function run() {
         app.get('/services', async (req, res) => {
             const query = {}
             const cursor = serviceCollection.find(query)
-            const items = await (await cursor.toArray()).reverse();
-            // const items = await cursor.toArray();
+            const items = await cursor.toArray();
             res.send(items)
 
         });
@@ -49,7 +74,7 @@ async function run() {
 
         app.post('/items', async (req, res) => {
             const user = req.body;
-            console.log(user);
+            // console.log(user);
             const result = await serviceCollection.insertOne(user)
             res.send(result);
         });
@@ -57,7 +82,14 @@ async function run() {
 
         // review api
 
-        app.get('/reviews', async (req, res) => {
+        app.get('/reviews', verifyJWT, async (req, res) => {
+
+            const decoded = req.decoded
+            // console.log('Inside Review Api', decoded)
+            if (decoded.email !== req.query.email) {
+                res.status(403).send({ message: 'unauthorized access' })
+            }
+
             let query = {};
             if (req.query.email) {
                 query = {
@@ -77,7 +109,7 @@ async function run() {
                 }
             }
             const cursor = reviewCollection.find(query);
-            const allReview = await cursor.toArray();
+            const allReview = await (await cursor.toArray()).reverse();
             res.send(allReview)
         })
 
